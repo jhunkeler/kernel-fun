@@ -1,25 +1,15 @@
 section .text
 
-global pio_read
-global pio_write
+global inb
+global outb
 
-pio_read:
-    push ebp
-    mov ebp, esp
-
-    mov edx, [esp + 8]
+inb:
+    mov edx, [esp + 4]
     in al, dx
-
-    leave
     ret
 
-pio_write:
-    push ebp
-    mov ebp, esp
-
-    mov edx, [esp + 8]
-    mov al, [esp + 12]
+outb:
+    mov al, [esp + 8]
+    mov edx, [esp + 4]
     out dx, al
-
-    leave
     ret
