@@ -36,6 +36,5 @@ section .data
 section .bss
 align 4
 stack_bottom:
-    resb 8192
+    resb 16384
 stack_top:
-EOK:
