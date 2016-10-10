@@ -4,8 +4,8 @@ global PIC_sendEOI
 global idt_init
 extern interrupt_handler
 
-extern pio_read
-extern pio_write
+extern inb
+extern outb
 
 struc idt_entry
     .base_low:  resw 1
@@ -85,20 +85,6 @@ no_error_code_interrupt_handler 31
 no_error_code_interrupt_handler 33
 
 
-;interrupt_handler:
-;    cmp byte [esp + 4], 0x21
-;    je .int21
-;
-;    jmp .end
-;
-;.int21:
-;    mov dword [0xB8000], ': ) '
-;    push m
-;    call kprint
-;
-;.end:
-;    ret
-
 PIC_sendEOI:
     ret
 
@@ -114,85 +100,56 @@ PIC_remap:
     sub ebp, 8
 
     push PIC1_DATA
-    call pio_read
+    call inb
     mov [ebp - 4], al           ; save PIC1 mask
 
     push PIC2_DATA
-    call pio_read
+    call inb
     mov [ebp - 8], al           ; save PIC2 mask
 
+    push ICW1_INIT+ICW1_ICW4    ; initialization sequence (cascade)
     push PIC1_COMMAND
-    push ICW1_INIT+ICW1_ICW4    ; initialization sequence (cascade)
-    call pio_write
+    call outb
 
+    push ICW1_INIT+ICW1_ICW4    ; initialization sequence (cascade)
     push PIC2_COMMAND
-    push ICW1_INIT+ICW1_ICW4    ; initialization sequence (cascade)
-    call pio_write
+    call outb
 
-    push PIC1_DATA
     push word [ebp + 8]         ; ICW2: Master PIC vector offset
-    call pio_write
+    push PIC1_DATA
+    call outb
 
-    push PIC2_DATA
     push word [ebp + 12]        ; ICW2: Save PIC vector offset
-    call pio_write
+    push PIC2_DATA
+    call outb
 
-    push PIC1_DATA
     push 0x4                    ; ICW3: tell Master PIC there is a slave PIC at IRQ2 (0000 0100)
-    call pio_write
+    push PIC1_DATA
+    call outb
 
-    push PIC2_DATA
     push 2                      ; ICW3: tell Slave PIC its cacade identity (0000 0010)
-    call pio_write
-
-    push PIC1_DATA
-    push ICW4_8086
-    call pio_write
-
     push PIC2_DATA
+    call outb
+
     push ICW4_8086
-    call pio_write
-
-
-    ;; ICW3
-    ;push PIC1_DATA
-    ;push 0x20
-    ;call pio_write
-
-    ;push PIC2_DATA
-    ;push 0x28
-    ;call pio_write
-
-    ;; ICW4
-    ;push PIC1_DATA
-    ;push 0x00
-    ;call pio_write
-
-    ;push PIC2_DATA
-    ;push 0x01
-    ;call pio_write
-
-    ;; mask interrupts
-    ;push PIC1_DATA
-    ;push 0xff
-    ;call pio_write
-
-    ;push PIC2_DATA
-    ;push 0xff
-    ;call pio_write
-
     push PIC1_DATA
+    call outb
+
+    push ICW4_8086
+    push PIC2_DATA
+    call outb
+
     push word [ebp - 4]
-    call pio_write
+    push PIC1_DATA
+    call outb
 
-    push PIC2_DATA
     push word [ebp - 8]
-    call pio_write
+    push PIC2_DATA
+    call outb
 
     add ebp, 8
     leave
     ret
-
 
 idt_init:
     push ebp
